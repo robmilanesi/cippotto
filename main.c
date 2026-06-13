@@ -63,7 +63,7 @@ Chip8 init_chip8() {
         0xF0,0x80,0xF0,0x80,0x80  // F
     };
     Chip8 chip8;
-
+    memset(&chip8, 0, sizeof(chip8));
     for (int i = 0; i < sizeof(chip8.memory); i++) {
         chip8.memory[i] = 0;
     }
@@ -72,16 +72,19 @@ Chip8 init_chip8() {
     return chip8;
 }
 
-void load_rom(Chip8* chip8, char* path) {
+int load_rom(Chip8* chip8, char* path) {
+    printf("Opening rom at: %s\n", path);
     char* permissions = "rb";
     int mem_start_index = 0x200;
     FILE* fptr = fopen(path, permissions);
     if (fptr == NULL) {
         perror("An error occurred opening rom file");
-        return;
+        printf("Rom path: %s\n", path);
+        return 1;
     }
     fread(&chip8->memory[mem_start_index], sizeof(uint8_t), sizeof(chip8->memory) - mem_start_index, fptr);
     fclose(fptr);
+    return 0;
 }
 
 uint16_t fetch(Chip8* chip8) {
@@ -133,6 +136,11 @@ void execute(Chip8* chip8, DecodedInstruction* instruction) {
                 chip8->pc += 2;
             }
             break;
+        case 0x5:
+            if (chip8->v[instruction->x] == chip8->v[instruction->y]) {
+                chip8->pc += 2;
+            }
+            break;
         case 0x6:
             chip8->v[instruction->x] = instruction->nn;
             break;
@@ -150,16 +158,41 @@ void execute(Chip8* chip8, DecodedInstruction* instruction) {
                 case 2:
                     chip8->v[instruction->x] = chip8->v[instruction->x] & chip8->v[instruction->y];
                     break;
+                case 3:
+                    chip8->v[instruction->x] = chip8->v[instruction->x] ^ chip8->v[instruction->y];
+                    break;
                 case 4: {
                     uint16_t sum = chip8->v[instruction->x] + chip8->v[instruction->y];
-                    chip8->v[0xF] = (sum > 0xFF) ? 1 : 0;
-                    chip8->v[instruction->x] = sum & 0x0FF;
+                    uint8_t result = sum & 0xFF;
+                    uint8_t carry = (sum > 0xFF) ? 1 : 0;
+                    chip8->v[instruction->x] = result;
+                    chip8->v[0xF] = carry;
                     break;
                 }
                 case 5: {
                     int16_t diff = chip8->v[instruction->x] - chip8->v[instruction->y];
-                    chip8->v[0xF] = (diff < 0) ? 0 : 1;
                     chip8->v[instruction->x] = diff;
+                    chip8->v[0xF] = (diff < 0) ? 0 : 1;
+                    break;
+                }
+                case 6: {
+                    uint8_t vf = chip8->v[instruction->y] & 0x1;
+                    uint8_t result = chip8->v[instruction->y] >> 1;
+                    chip8->v[instruction->x] = result;
+                    chip8->v[0xF] = vf;
+                    break;
+                }
+                case 7: {
+                    int16_t diff = chip8->v[instruction->y] - chip8->v[instruction->x];
+                    chip8->v[instruction->x] = diff;
+                    chip8->v[0xF] = (diff < 0) ? 0 : 1;
+                    break;
+                }
+                case 0xE: {
+                    uint8_t vf = (chip8->v[instruction->y] & 0x80) >> 7;
+                    uint8_t result = chip8->v[instruction->y] << 1;
+                    chip8->v[instruction->x] = result;
+                    chip8->v[0xF] = vf;
                     break;
                 }
                 default:
@@ -193,8 +226,13 @@ void execute(Chip8* chip8, DecodedInstruction* instruction) {
                     uint8_t font_pixel = (sprite & (0x80 >> bit)) > 0;
                     uint8_t display_byte = chip8->display[index];
                     uint8_t new_value = display_byte ^ font_pixel;
+                    if (x >= 64 || y >= 32 ) {
+                        continue;
+                    }
                     chip8->display[index] = new_value;
-                    chip8->v[0xF] = font_pixel == 1 && new_value == 0 ? 1 : 0;
+                    if (font_pixel == 1 && new_value == 0) {
+                        chip8->v[0xF] = 1;
+                    }
                 }
 
             }
@@ -225,6 +263,27 @@ void execute(Chip8* chip8, DecodedInstruction* instruction) {
                 case 0x15:
                     chip8->delay_timer = chip8->v[instruction->x];
                     break;
+                case 0x18:
+                    chip8->sound_timer = chip8->v[instruction->x];
+                    break;
+                case 0x29:
+                    chip8->i = chip8->v[instruction->x] * 5;
+                    break;
+                case 0x33:
+                    chip8->memory[chip8->i] = chip8->v[instruction->x] / 100;
+                    chip8->memory[chip8->i + 1] = (chip8->v[instruction->x] / 10) % 10;
+                    chip8->memory[chip8->i + 2] = chip8->v[instruction->x] % 10;
+                    break;
+                case 0x55:
+                    for (int i = 0; i <= instruction->x; i++) {
+                        chip8->memory[chip8->i + i] = chip8->v[i];
+                    }
+                    break;
+                case 0x65:
+                    for (int i = 0; i <= instruction->x; i++) {
+                        chip8->v[i] = chip8->memory[chip8->i + i];
+                    }
+                    break;
                 case 0x1E:
                     chip8->i += chip8->v[instruction->x];
                     break;
@@ -243,6 +302,9 @@ void execute(Chip8* chip8, DecodedInstruction* instruction) {
                     }
                     break;
                 }
+                case 0xB:
+                    chip8->pc = instruction->nnn + chip8->v[0];
+                    break;
                 default:
                     printf("Unhandled opcode: 0x%04X (nibble 0x%X)\n", instruction->original, instruction->nibble);
                     break;
@@ -273,6 +335,18 @@ void update_keypad(Chip8* chip8, SDL_Event* event) {
         case SDL_KEYUP: {
             uint8_t flag = event->type == SDL_KEYUP ? 0 : 1;
             switch(event->key.keysym.sym) {
+                case SDLK_1:
+                    chip8->keypad[0x1] = flag;
+                    break;
+                case SDLK_2:
+                    chip8->keypad[0x2] = flag;
+                    break;
+                case SDLK_3:
+                    chip8->keypad[0x3] = flag;
+                    break;
+                case SDLK_4:
+                    chip8->keypad[0xC] = flag;
+                    break;
                 case SDLK_q:
                     chip8->keypad[0x4] = flag;
                     break;
@@ -285,13 +359,43 @@ void update_keypad(Chip8* chip8, SDL_Event* event) {
                 case SDLK_r:
                     chip8->keypad[0xD] = flag;
                     break;
+                case SDLK_a:
+                    chip8->keypad[0x7] = flag;
+                    break;
+                case SDLK_s:
+                    chip8->keypad[0x8] = flag;
+                    break;
+                case SDLK_d:
+                    chip8->keypad[0x9] = flag;
+                    break;
+                case SDLK_f:
+                    chip8->keypad[0xE] = flag;
+                    break;
+                case SDLK_z:
+                    chip8->keypad[0xA] = flag;
+                    break;
+                case SDLK_x:
+                    chip8->keypad[0x0] = flag;
+                    break;
+                case SDLK_c:
+                    chip8->keypad[0xB] = flag;
+                    break;
+                case SDLK_v:
+                    chip8->keypad[0xF] = flag;
+                    break;
             }
         }
         break;
     }
 }
 
-int main() {
+int main(int argc, char** argv) {
+
+    if (argc < 2) {
+        printf("Uso: %s <path_alla_rom>\n", argv[0]);
+        return 1;
+    }
+
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         printf("Can't initialize SDL: %s\n", SDL_GetError());
         return 1;
@@ -313,7 +417,10 @@ int main() {
 
     SDL_Event event;
     Chip8 chip8 = init_chip8();
-    load_rom(&chip8, "./roms/pong.ch8");
+    if (load_rom(&chip8, argv[1]) != 0) {
+        SDL_Quit();
+        return 1;
+    }
 
     uint8_t is_running = 1;
     Uint32 last_timer_update = SDL_GetTicks();
