@@ -392,7 +392,7 @@ void update_keypad(Chip8* chip8, SDL_Event* event) {
 int main(int argc, char** argv) {
 
     if (argc < 2) {
-        printf("Uso: %s <path_alla_rom>\n", argv[0]);
+        printf("Usage: %s <path_to_the_rom>\n", argv[0]);
         return 1;
     }
 
