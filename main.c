@@ -16,6 +16,7 @@
 #define SCREEN_WIDTH 640
 #define SCREEN_HEIGHT 320
 #define PIXEL_SCALE 10
+#define INSTRUCTION_PER_FRAME 10
 
 typedef struct {
     uint8_t memory[4096];
@@ -154,6 +155,12 @@ void execute(Chip8* chip8, DecodedInstruction* instruction) {
                     chip8->v[instruction->x] = sum & 0x0FF;
                     break;
                 }
+                case 5: {
+                    int16_t diff = chip8->v[instruction->x] - chip8->v[instruction->y];
+                    chip8->v[0xF] = (diff < 0) ? 0 : 1;
+                    chip8->v[instruction->x] = diff;
+                    break;
+                }
             }
             break;
         case 0x9:
@@ -282,7 +289,9 @@ int main() {
     load_rom(&chip8, "./roms/IBM Logo.ch8");
 
     uint8_t is_running = 1;
+    Uint32 last_timer_update = SDL_GetTicks();
     while(is_running) {
+
         while(SDL_PollEvent(&event)) {
             switch(event.type) {
                 case SDL_KEYDOWN:
@@ -293,9 +302,19 @@ int main() {
             }
             update_keypad(&chip8, &event);
         }
-        uint16_t instruction = fetch(&chip8);
-        DecodedInstruction decoded = decode(instruction);
-        execute(&chip8, &decoded);
+
+        for (int i = 0; i < INSTRUCTION_PER_FRAME; i++) {
+            uint16_t instruction = fetch(&chip8);
+            DecodedInstruction decoded = decode(instruction);
+            execute(&chip8, &decoded);
+        }
+
+        Uint32 now = SDL_GetTicks();
+        if (now - last_timer_update >= 16) {
+            if (chip8.delay_timer > 0) chip8.delay_timer--;
+            if (chip8.sound_timer > 0) chip8.sound_timer--;
+            last_timer_update = now;
+        }
         render(renderer, &chip8);
         SDL_Delay(16);
     }
