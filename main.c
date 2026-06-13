@@ -291,6 +291,7 @@ int main() {
                     }
                     break;
             }
+            update_keypad(&chip8, &event);
         }
         uint16_t instruction = fetch(&chip8);
         DecodedInstruction decoded = decode(instruction);
