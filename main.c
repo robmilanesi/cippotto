@@ -213,6 +213,15 @@ void execute(Chip8* chip8, DecodedInstruction* instruction) {
             break;
         case 0xF:
             switch(instruction->nn) {
+                case 0x07:
+                    chip8->v[instruction->x] = chip8->delay_timer;
+                    break;
+                case 0x15:
+                    chip8->delay_timer = chip8->v[instruction->x];
+                    break;
+                case 0x1E:
+                    chip8->i += chip8->v[instruction->x];
+                    break;
                 case 0x0A: {
                     int key_pressed = -1;
                     for (int k = 0; k < 16; k++) {
