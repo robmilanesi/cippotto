@@ -184,6 +184,39 @@ void execute(Chip8* chip8, DecodedInstruction* instruction) {
             }
             break;
         }
+        case 0xE:
+            switch(instruction->nn) {
+                case 0x9E:
+                    if (chip8->keypad[chip8->v[instruction->x]]) {
+                        chip8->pc += 2;
+                    }
+                    break;
+                case 0xA1:
+                    if (!chip8->keypad[chip8->v[instruction->x]]) {
+                        chip8->pc += 2;
+                    }
+                    break;
+            }
+            break;
+        case 0xF:
+            switch(instruction->nn) {
+                case 0x0A: {
+                    int key_pressed = -1;
+                    for (int k = 0; k < 16; k++) {
+                        if (chip8->keypad[k]) {
+                            key_pressed = k;
+                            break;
+                        }
+                    }
+                    if (key_pressed == -1) {
+                        chip8->pc -= 2;
+                    } else {
+                        chip8->v[instruction->x] = key_pressed;
+                    }
+                    break;
+                }
+            }
+            break;
     }
 }
 
@@ -198,6 +231,30 @@ void render(SDL_Renderer* renderer, Chip8* chip8) {
         }
     }
     SDL_RenderPresent(renderer);
+}
+
+void update_keypad(Chip8* chip8, SDL_Event* event) {
+    switch(event->type) {
+        case SDL_KEYDOWN:
+        case SDL_KEYUP: {
+            uint8_t flag = event->type == SDL_KEYUP ? 0 : 1;
+            switch(event->key.keysym.sym) {
+                case SDLK_q:
+                    chip8->keypad[0x4] = flag;
+                    break;
+                case SDLK_w:
+                    chip8->keypad[0x5] = flag;
+                    break;
+                case SDLK_e:
+                    chip8->keypad[0x6] = flag;
+                    break;
+                case SDLK_r:
+                    chip8->keypad[0xD] = flag;
+                    break;
+            }
+        }
+        break;
+    }
 }
 
 int main() {
@@ -229,7 +286,7 @@ int main() {
         while(SDL_PollEvent(&event)) {
             switch(event.type) {
                 case SDL_KEYDOWN:
-                    if (event.key.keysym.sym == SDLK_q) {
+                    if (event.key.keysym.sym == SDLK_ESCAPE) {
                         is_running = 0;
                     }
                     break;
