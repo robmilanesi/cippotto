@@ -103,12 +103,33 @@ DecodedInstruction decode(uint16_t instruction) {
 void execute(Chip8* chip8, DecodedInstruction* instruction) {
     switch(instruction->nibble) {
         case 0x0:
-            if (0x00E0 == instruction->original) {
-                memset(chip8->display, 0, sizeof chip8->display);
+            switch (instruction->original) {
+                case 0x00E0:
+                    memset(chip8->display, 0, sizeof chip8->display);
+                    break;
+                case 0x00EE:
+                    chip8->sp--;
+                    chip8->pc = chip8->stack[chip8->sp];
+                    break;
             }
             break;
         case 0x1:
             chip8->pc = instruction->nnn;
+            break;
+        case 0x2:
+            chip8->stack[chip8->sp] = chip8->pc;
+            chip8->sp++;
+            chip8->pc = instruction->nnn;
+            break;
+        case 0x3:
+            if (chip8->v[instruction->x] == instruction->nn) {
+                chip8->pc += 2;
+            }
+            break;
+        case 0x4:
+            if (chip8->v[instruction->x] != instruction->nn) {
+                chip8->pc += 2;
+            }
             break;
         case 0x6:
             chip8->v[instruction->x] = instruction->nn;
@@ -133,6 +154,11 @@ void execute(Chip8* chip8, DecodedInstruction* instruction) {
                     chip8->v[instruction->x] = sum & 0x0FF;
                     break;
                 }
+            }
+            break;
+        case 0x9:
+            if (chip8->v[instruction->x] != chip8->v[instruction->y]) {
+                chip8->pc += 2;
             }
             break;
         case 0xA:
