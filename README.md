@@ -2,6 +2,8 @@
 
 A CHIP-8 emulator written in C using SDL2 as graphic library.
 
+![IBM Logo](/docs/ibm.png "IBM Logo")
+
 ## Why?
 My main goal was to learn C, getting into emulators and system programming a bit.
 
@@ -94,6 +96,13 @@ CHIP-8    Keyboard
 7 8 9 E   A S D F
 A 0 B F   Z X C V
 ```
+
+## Tests
+This project has been tested thanks to mostly [Timendus test suite](https://github.com/Timendus/chip8-test-suite), corax89 and probably many others, Thank you!
+
+![Timendus logo](/docs/logo.png "Timendus logo")
+
+![Test](/docs/test.png "Test")
 
 ## License
 [MIT](LICENSE)
