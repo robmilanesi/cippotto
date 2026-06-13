@@ -162,6 +162,9 @@ void execute(Chip8* chip8, DecodedInstruction* instruction) {
                     chip8->v[instruction->x] = diff;
                     break;
                 }
+                default:
+                    printf("Unhandled opcode: 0x%04X (nibble 0x%X)\n", instruction->original, instruction->nibble);
+                    break;
             }
             break;
         case 0x9:
@@ -209,6 +212,9 @@ void execute(Chip8* chip8, DecodedInstruction* instruction) {
                         chip8->pc += 2;
                     }
                     break;
+                default:
+                    printf("Unhandled opcode: 0x%04X (nibble 0x%X)\n", instruction->original, instruction->nibble);
+                    break;
             }
             break;
         case 0xF:
@@ -237,8 +243,14 @@ void execute(Chip8* chip8, DecodedInstruction* instruction) {
                     }
                     break;
                 }
+                default:
+                    printf("Unhandled opcode: 0x%04X (nibble 0x%X)\n", instruction->original, instruction->nibble);
+                    break;
             }
             break;
+            default:
+                printf("Unhandled opcode: 0x%04X (nibble 0x%X)\n", instruction->original, instruction->nibble);
+                break;
     }
 }
 
@@ -301,7 +313,7 @@ int main() {
 
     SDL_Event event;
     Chip8 chip8 = init_chip8();
-    load_rom(&chip8, "./roms/IBM Logo.ch8");
+    load_rom(&chip8, "./roms/pong.ch8");
 
     uint8_t is_running = 1;
     Uint32 last_timer_update = SDL_GetTicks();
