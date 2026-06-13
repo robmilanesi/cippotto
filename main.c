@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <SDL2/SDL.h>
@@ -171,6 +172,11 @@ void execute(Chip8* chip8, DecodedInstruction* instruction) {
         case 0xA:
             chip8->i = instruction->nnn;
             break;
+        case 0xC: {
+            int random_value = rand() % (0xFF + 1);
+            chip8->v[instruction->x] = random_value & instruction->nn;
+            break;
+        }
         case 0xD: {
             uint8_t vx = chip8->v[instruction->x] % 64;
             uint8_t vy = chip8->v[instruction->y] % 32;
