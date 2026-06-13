@@ -16,6 +16,15 @@ My main goal was to learn C, getting into emulators and system programming a bit
 - Built-in fontset (0–F)
 - Runs at 10 instructions per frame (~600 instructions/second)
 
+## To Be added
+ - Audio support
+ - Quirks: currently the implementation is very basic, no config allowed for newer version functionalities.
+ - Save states
+ - Super Chip8 improvements
+ - Better rendering (configurable, currently it's very basic)
+ - Color palette configurable
+ - Interactive debugger
+
 ## Implemented opcodes
 
 | Opcode | Description |
