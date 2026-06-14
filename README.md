@@ -1,4 +1,5 @@
-# Cippotto
+# Cippotto 
+[![Build](https://github.com/robmilanesi/cippotto/actions/workflows/build.yml/badge.svg)](https://github.com/robmilanesi/cippotto/actions/workflows/build.yml)
 
 A CHIP-8 emulator written in C using SDL2 as graphic library.
 
