@@ -68,7 +68,7 @@ Chip8 init_chip8() {
     };
     Chip8 chip8;
     memset(&chip8, 0, sizeof(chip8));
-    for (int i = 0; i < sizeof(chip8.memory); i++) {
+    for (size_t i = 0; i < sizeof(chip8.memory); i++) {
         chip8.memory[i] = 0;
     }
     chip8.pc = 0x200;
@@ -324,7 +324,7 @@ void render(SDL_Renderer* renderer, Chip8* chip8) {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    for (int i = 0; i < sizeof(chip8->display); i++) {
+    for (size_t i = 0; i < sizeof(chip8->display); i++) {
         if (chip8->display[i] == 1) {
             SDL_Rect pixel_rect = { (i % 64) * PIXEL_SCALE, (i / 64) * PIXEL_SCALE, PIXEL_SCALE, PIXEL_SCALE };
             SDL_RenderFillRect(renderer, &pixel_rect);
@@ -394,6 +394,7 @@ void update_keypad(Chip8* chip8, SDL_Event* event) {
 }
 
 void audio_callback(void* userdata, uint8_t* stream, int len) {
+    (void)userdata;
     int16_t* samples = (int16_t*)stream;
     int num_samples = len / 2;
     static int counter = 0;
