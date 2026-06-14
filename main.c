@@ -1,3 +1,4 @@
+#include <SDL2/SDL_audio.h>
 #include <SDL2/SDL_error.h>
 #include <SDL2/SDL_events.h>
 #include <SDL2/SDL_keycode.h>
@@ -18,6 +19,9 @@
 #define SCREEN_HEIGHT 320
 #define PIXEL_SCALE 10
 #define INSTRUCTION_PER_FRAME 10
+#define AUDIO_SAMPLE_RATE 44100
+#define AUDIO_FREQUENCY 440
+#define SAMPLE_COUNT (AUDIO_SAMPLE_RATE/AUDIO_FREQUENCY)
 
 typedef struct {
     uint8_t memory[4096];
@@ -389,6 +393,27 @@ void update_keypad(Chip8* chip8, SDL_Event* event) {
     }
 }
 
+void audio_callback(void* userdata, uint8_t* stream, int len) {
+    int16_t* samples = (int16_t*)stream;
+    int num_samples = len / 2;
+    static int counter = 0;
+
+    for (int i = 0; i < num_samples; i++) {
+        samples[i] = (counter < SAMPLE_COUNT / 2) ? 3000 : -3000;
+        counter = (counter + 1) % SAMPLE_COUNT;
+    }
+}
+
+SDL_AudioDeviceID init_audio_device() {
+    SDL_AudioSpec spec = {0};
+    spec.freq = AUDIO_SAMPLE_RATE;
+    spec.format = AUDIO_S16SYS;
+    spec.channels = 1;
+    spec.samples = 512;
+    spec.callback = audio_callback;
+    return SDL_OpenAudioDevice(NULL, 0, &spec, NULL, 0);
+}
+
 int main(int argc, char** argv) {
 
     if (argc < 2) {
@@ -396,7 +421,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
         printf("Can't initialize SDL: %s\n", SDL_GetError());
         return 1;
     }
@@ -421,6 +446,8 @@ int main(int argc, char** argv) {
         SDL_Quit();
         return 1;
     }
+
+    SDL_AudioDeviceID audio_device = init_audio_device();
 
     uint8_t is_running = 1;
     Uint32 last_timer_update = SDL_GetTicks();
@@ -448,6 +475,7 @@ int main(int argc, char** argv) {
             if (chip8.delay_timer > 0) chip8.delay_timer--;
             if (chip8.sound_timer > 0) chip8.sound_timer--;
             last_timer_update = now;
+            SDL_PauseAudioDevice(audio_device, chip8.sound_timer == 0);
         }
         render(renderer, &chip8);
         SDL_Delay(16);
